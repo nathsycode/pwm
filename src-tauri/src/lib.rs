@@ -1,5 +1,5 @@
 mod vault;
-use crate::vault::{load_vault as load_vault_file, EncryptedVault, Vault, VaultError};
+use crate::vault::{load_vault as load_vault_file, PasswordEntry, Vault, VaultError};
 
 #[tauri::command]
 fn create_vault(password: String) -> Result<Vault, VaultError> {
@@ -17,11 +17,40 @@ fn load_vault(password: String) -> Result<Vault, VaultError> {
     Ok(vault)
 }
 
+#[tauri::command]
+fn add_entry(password: String, entry: PasswordEntry) -> Result<Vault, VaultError> {
+    let ev = load_vault_file()?;
+    let mut vault = ev.decrypt(&password)?;
+
+    vault.add_entry(entry);
+
+    vault.save(&password)?;
+
+    Ok(vault)
+}
+
+#[tauri::command]
+fn delete_entry(password: String, index: usize) -> Result<Vault, VaultError> {
+    let ev = load_vault_file()?;
+    let mut vault = ev.decrypt(&password)?;
+
+    vault.delete_entry(index)?;
+
+    vault.save(&password)?;
+
+    Ok(vault)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![create_vault, load_vault])
+        .invoke_handler(tauri::generate_handler![
+            create_vault,
+            load_vault,
+            add_entry,
+            delete_entry
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

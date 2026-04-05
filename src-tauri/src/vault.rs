@@ -4,7 +4,10 @@ use aes_gcm::{
 };
 use argon2::Argon2;
 use base64::{engine::general_purpose::STANDARD, Engine};
-use std::fs;
+use std::{
+    fs,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -51,7 +54,10 @@ impl Vault {
     pub fn new() -> Self {
         Self {
             entries: vec![],
-            created_at: 1234,
+            created_at: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
         }
     }
 
@@ -60,6 +66,19 @@ impl Vault {
 
         save_vault(&ev)?;
 
+        Ok(())
+    }
+
+    pub fn add_entry(&mut self, entry: PasswordEntry) {
+        self.entries.push(entry);
+    }
+
+    pub fn delete_entry(&mut self, index: usize) -> Result<(), VaultError> {
+        if index >= self.entries.len() {
+            return Err(VaultError::CorruptedVault);
+        };
+
+        self.entries.remove(index);
         Ok(())
     }
 }
